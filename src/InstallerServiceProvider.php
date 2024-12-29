@@ -52,6 +52,12 @@ class InstallerServiceProvider extends ServiceProvider
      */
     protected function registerMacros()
     {
+        // Record a macro that checks the application database connection status.
+        Application::macro('isConnected', function () {
+            // Check the completion status of the application installation and database connection.
+            return Schema::hasTable($this->app['config']->get('larawise::installer.table', 'settings'));
+        });
+
         // Record a macro that checks the application installation status.
         Application::macro('isInstalled', function () {
             // Check the application installation wizard status.
