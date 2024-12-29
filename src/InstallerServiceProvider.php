@@ -21,6 +21,17 @@ use Illuminate\Support\ServiceProvider;
 class InstallerServiceProvider extends ServiceProvider
 {
     /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register(): void
+    {
+        // Record the macros required for the installation wizard.
+        $this->registerMacros();
+    }
+
+    /**
      * Bootstrap any application services.
      *
      * @return void
@@ -31,6 +42,30 @@ class InstallerServiceProvider extends ServiceProvider
         $this->app['events']->listen(InstallationCompleted::class, function () {
             // Create a file containing the date and time of the installation.
             $this->app['files']->put(storage_path('framework/install.lock'), Carbon::now()->toDateTimeString());
+        });
+    }
+
+    /**
+     * Register macros for the application.
+     *
+     * @return void
+     */
+    protected function registerMacros()
+    {
+        // Record a macro that checks the application installation status.
+        Application::macro('isInstalled', function () {
+            // Check the application installation wizard status.
+            if (! $this->app['config']->get('larawise::installer.status', false)) {
+                return true;
+            }
+
+            // Check if the application is installed.
+            if ($this->app['files']->exists($this->app->storagePath('framework/install.lock'))) {
+                return true;
+            }
+
+            // Check the completion status of the application installation and database connection.
+            return ! $this->app['files']->exists($this->app->storagePath('framework/installing.lock')) && $this->app->isConnected();
         });
     }
 }
