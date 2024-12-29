@@ -38,6 +38,31 @@ class InstallerServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register an event listener for the matching of routes.
+        $this->app['events']->listen(RouteMatched::class, function () {
+            // Make router instance from container.
+            $router = $this->app->make('router');
+
+            // Register a new middleware alias named `installer` and push the middleware.
+            $router->aliasMiddleware('installer', InstallerMiddleware::class);
+
+            // Register a new middleware alias named `install` and push the middleware.
+            $router->aliasMiddleware('installed', InstalledMiddleware::class);
+
+            // Register a new middleware alias named `installing` and push the middleware.
+            $router->aliasMiddleware('installing', InstallingMiddleware::class);
+
+            // Middleware that checks the installation completion status to the `web` middleware.
+            $router->pushMiddlewareToGroup(config('larawise::installer.middleware', 'web'), 'installer');
+
+            // Since the `admin` middleware group is special to Larawise, it may not be present
+            // in every application, so we must check the middleware group and push it accordingly.
+            if ($router->hasMiddlewareGroup('admin')) {
+                // Middleware that checks the installation completion status to the `admin` middleware.
+                $router->pushMiddlewareToGroup('admin', InstallerMiddleware::class);
+            }
+        });
+
         // Register event listener for installation completed events.
         $this->app['events']->listen(InstallationCompleted::class, function () {
             // Create a file containing the date and time of the installation.
